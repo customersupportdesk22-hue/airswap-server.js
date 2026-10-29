@@ -64,14 +64,15 @@ app.get('/admin', (req, res) => {
 // ==========================================
 // USER ROUTES
 // ==========================================
-
 // 1. Get App Settings (Paybill info for frontend)
 app.get('/api/settings', async (req, res) => {
     try {
         const currentSettings = await settings.findOne({ key: 'app_settings' });
         res.json({ 
             paybill: currentSettings.paybill, 
-            account: currentSettings.account 
+            account: currentSettings.account,
+            safaricomReceiving: currentSettings.safaricomReceiving, // <-- ADD THIS
+            airtelReceiving: currentSettings.airtelReceiving        // <-- ADD THIS
         });
     } catch (e) {
         res.status(500).json({ error: 'Failed to load settings' });
