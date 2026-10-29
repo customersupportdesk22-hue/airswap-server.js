@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirSwap Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2E9E53; --bg: #F4F7F6; --text: #1A1A1A; --gray: #888;
+            --white: #FFFFFF; --border: #E2E8F0; --danger: #EF4444; --warning: #F59E0B;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--white); padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .header h1 { font-size: 22px; font-weight: 800; color: var(--primary); }
+        .header p { font-size: 13px; color: var(--gray); }
+
+        .section { background: var(--white); border-radius: 16px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .section-title { font-size: 18px; font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+
+        /* Settings Form */
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .input-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 5px; color: var(--gray); text-transform: uppercase; }
+        .input-group input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; }
+        .input-group input:focus { border-color: var(--primary); }
+        
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; justify-content: center; margin-top: 15px; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-small { padding: 8px 15px; font-size: 12px; }
+        .btn-danger { background: #FEE2E2; color: #DC2626; }
+
+        /* Cards for Pending Items */
+        .pending-card { border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 5px solid var(--warning); background: #FFFBEB; }
+        .pending-card.deposit { border-left-color: var(--primary); background: #F0FDF4; }
+        
+        .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .row span:first-child { color: var(--gray); font-weight: 600; }
+        .row span:last-child { font-weight: 800; }
+
+        .action-row { display: flex; gap: 10px; margin-top: 15px; align-items: center; }
+        .action-row input { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; text-transform: uppercase; }
+        
+        .empty-state { text-align: center; padding: 30px; color: var(--gray); font-size: 14px; }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 10px; border-left: 5px solid var(--primary); font-weight: 600; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    </style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>Admin Dashboard</h1>
+            <p>Manage AirSwap requests, payouts, and settings.</p>
+        </div>
+        <button class="btn btn-small btn-danger" onclick="window.location.reload()">🔄 Refresh</button>
+    </div>
+
+    <!-- SETTINGS SECTION -->
+    <div class="section">
+        <div class="section-title"><i class="fa-solid fa-gear"></i> App Settings</div>
+        <div class="settings-grid">
+            <div class="input-group">
+                <label>Paybill Number (Deposits)</label>
+                <input type="text" id="setPaybill">
+            </div>
+            <div class="input-group">
+                <label>Account Number</label>
+                <input type="text" id="setAccount">
+            </div>
+            <div class="input-group">
+                <label>Safaricom Receiving Number (*140#)</label>
+                <input type="text" id="setSafNumber">
+            </div>
+            <div class="input-group">
+                <label>Airtel Receiving Number (*140#)</label>
+                <input type="text" id="setAirtelNumber">
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+
+    <!-- PENDING DEPOSITS SECTION -->
+    <div class="section">
+        <div class="section-title"><i class="fa-solid fa-wallet"></i> Pending Deposits (To Credit Wallets)</div>
+        <div id="depositList">
+            <div class="empty-state">Loading...</div>
+        </div>
+    </div>
+
+    <!-- PENDING AIRTIME CONVERSIONS SECTION -->
+    <div class="section">
+        <div class="section-title"><i class="fa-solid fa-money-bill-transfer"></i> Pending Airtime Conversions (To Pay Out)</div>
+        <div id="conversionList">
+            <div class="empty-state">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show Toast Notification
+    function showToast(msg) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerText = msg;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3500);
+    }
+
+    // 1. LOAD SETTINGS
+    async function loadSettings() {
+        try {
+            const res = await fetch('/api/admin/settings');
+            const data = await res.json();
+            document.getElementById('setPaybill').value = data.paybill || '';
+            document.getElementById('setAccount').value = data.account || '';
+            document.getElementById('setSafNumber').value = data.safaricomReceiving || '';
+            document.getElementById('setAirtelNumber').value = data.airtelReceiving || '';
+        } catch (e) { console.error("Failed to load settings"); }
+    }
+
+    // 2. SAVE SETTINGS
+    async function saveSettings() {
+        const paybill = document.getElementById('setPaybill').value;
+        const account = document.getElementById('setAccount').value;
+        const safaricomReceiving = document.getElementById('setSafNumber').value;
+        const airtelReceiving = document.getElementById('setAirtelNumber').value;
+
+        try {
+            await fetch('/api/admin/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paybill, account, safaricomReceiving, airtelReceiving })
+            });
+            showToast('✅ Settings updated successfully!');
+        } catch (e) {
+            showToast('❌ Failed to update settings');
+        }
+    }
+
+    // 3. LOAD PENDING DEPOSITS
+    async function loadDeposits() {
+        const list = document.getElementById('depositList');
+        try {
+            const res = await fetch('/api/admin/pending-deposits');
+            const data = await res.json();
+            
+            if (data.length === 0) {
+                list.innerHTML = '<div class="empty-state">No pending deposits.</div>';
+                return;
+            }
+
+            list.innerHTML = data.map(dep => `
+                <div class="pending-card deposit">
+                    <div class="row"><span>User Phone:</span> <span>${dep.phone}</span></div>
+                    <div class="row"><span>Amount Deposited:</span> <span style="color: var(--primary); font-size: 16px;">KES ${dep.amount}</span></div>
+                    <div class="row"><span>Date:</span> <span>${new Date(dep.createdAt).toLocaleString()}</span></div>
+                    <div class="action-row">
+                        <button class="btn btn-primary btn-small" onclick="approveDeposit('${dep._id}', '${dep.phone}', '${dep.amount}')">✅ Credit Wallet</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            list.innerHTML = '<div class="empty-state" style="color:red">Error loading deposits. Check server.</div>';
+        }
+    }
+
+    // 4. APPROVE DEPOSIT
+    async function approveDeposit(id, phone, amount) {
+        if(!confirm(`Are you sure you want to credit KES ${amount} to ${phone}?`)) return;
+        
+        try {
+            await fetch('/api/admin/approve-deposit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, phone, amount })
+            });
+            showToast('✅ Wallet credited successfully!');
+            loadDeposits(); // Refresh list
+        } catch (e) {
+            showToast('❌ Failed to approve deposit');
+        }
+    }
+
+    // 5. LOAD PENDING CONVERSIONS
+    async function loadConversions() {
+        const list = document.getElementById('conversionList');
+        try {
+            const res = await fetch('/api/admin/pending');
+            const data = await res.json();
+            
+            if (data.length === 0) {
+                list.innerHTML = '<div class="empty-state">No pending conversions.</div>';
+                return;
+            }
+
+            list.innerHTML = data.map(conv => `
+                <div class="pending-card">
+                    <div class="row"><span>Network:</span> <span>${conv.network}</span></div>
+                    <div class="row"><span>Sending From:</span> <span>${conv.senderPhone}</span></div>
+                    <div class="row"><span>Receiving Cash On:</span> <span>${conv.receiverPhone}</span></div>
+                    <div class="row"><span>Airtime Sent:</span> <span>KES ${conv.airtimeAmount}</span></div>
+                    <div class="row"><span>Pay Out Amount:</span> <span style="color: var(--primary); font-size: 16px;">KES ${conv.payoutAmount}</span></div>
+                    <div class="row"><span>Date:</span> <span>${new Date(conv.createdAt).toLocaleString()}</span></div>
+                    
+                    <div class="action-row">
+                        <input type="text" id="code_${conv._id}" placeholder="Enter M-Pesa Code sent">
+                        <button class="btn btn-primary btn-small" onclick="approveConversion('${conv._id}')">Mark Paid</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            list.innerHTML = '<div class="empty-state" style="color:red">Error loading conversions. Check server.</div>';
+        }
+    }
+
+    // 6. APPROVE CONVERSION
+    async function approveConversion(id) {
+        const codeInput = document.getElementById(`code_${id}`).value.trim();
+        if (!codeInput) return alert("Please enter the M-Pesa transaction code you used to pay.");
+
+        try {
+            await fetch('/api/admin/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, mpesaCode: codeInput })
+            });
+            showToast('✅ Conversion marked as paid!');
+            loadConversions(); // Refresh list
+        } catch (e) {
+            showToast('❌ Failed to update conversion');
+        }
+    }
+
+    // INITIALIZE ON PAGE LOAD
+    window.onload = () => {
+        loadSettings();
+        loadDeposits();
+        loadConversions();
+    };
+</script>
+</body>
+</html>

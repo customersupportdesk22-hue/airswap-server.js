@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AirSwap - Convert Airtime to Cash</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-green: #2E9E53; --dark-green: #1E7A3E; --bg-color: #F7F9F8;
+            --text-dark: #1A1A1A; --text-gray: #888888; --white: #FFFFFF; --border-color: #E2E8F0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-dark); padding-bottom: 90px; }
+        .app-container { max-width: 480px; margin: 0 auto; padding: 20px; }
+
+        /* --- CUSTOM TOAST NOTIFICATIONS --- */
+        .toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 400px; pointer-events: none; }
+        .toast { background: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; animation: slideDown 0.3s ease forwards; border-left: 5px solid; }
+        .toast.success { border-color: var(--primary-green); color: var(--dark-green); }
+        .toast.error { border-color: #EF4444; color: #991B1B; }
+        .toast.info { border-color: #3B82F6; color: #1E3A8A; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        /* --- HEADERS --- */
+        .top-logo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 0; }
+        .logo-text { font-size: 22px; font-weight: 800; color: #1E1B4B; display: flex; align-items: center; gap: 8px; }
+        .logo-icon { color: var(--primary-green); font-size: 24px; }
+        
+        .page-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; }
+        .page-header h2 { font-size: 20px; font-weight: 800; color: var(--text-dark); }
+        .back-btn { background: var(--white); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 1px solid var(--border-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; color: var(--text-dark); }
+
+        /* --- HERO --- */
+        .hero {
+            background: linear-gradient(135deg, #34A853 0%, #118C4F 100%);
+            border-radius: 24px; padding: 24px; color: var(--white);
+            position: relative; overflow: hidden; margin-bottom: 24px; box-shadow: 0 10px 20px rgba(46, 158, 83, 0.2);
+        }
+        .hero h1 { font-size: 26px; line-height: 1.2; margin-bottom: 10px; font-weight: 800; }
+        .hero p { font-size: 13px; opacity: 0.9; margin-bottom: 20px; line-height: 1.5; width: 70%; }
+        .hero-btn { background: var(--white); color: var(--dark-green); border: none; padding: 12px 20px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .phone-mockup { position: absolute; right: -20px; top: 20px; width: 130px; height: 220px; background: rgba(255,255,255,0.9); border-radius: 20px; border: 4px solid #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.1); transform: rotate(10deg); display: flex; flex-direction: column; align-items: center; padding: 15px; color: #333; }
+
+        /* --- QUICK ACTIONS --- */
+        .section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .section-title h2 { font-size: 18px; color: var(--dark-green); font-weight: 800; }
+        .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 24px; }
+        .action-card { background: var(--white); padding: 16px; border-radius: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        .action-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 16px; }
+        .card-convert { background: #E8F5E9; } .card-convert .action-icon { background: #C8E6C9; color: #2E7D32; }
+        .card-buy { background: #E3F2FD; } .card-buy .action-icon { background: #BBDEFB; color: #1976D2; }
+        .card-voucher { background: #FFF3E0; } .card-voucher .action-icon { background: #FFE0B2; color: #F57C00; }
+        .card-share { background: #F3E5F5; } .card-share .action-icon { background: #E1BEE7; color: #8E24AA; }
+        .action-text h3 { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+        .action-text p { font-size: 11px; color: var(--text-gray); margin-top: 2px; }
+
+        /* --- BANNERS & RATES --- */
+        .banner { background: var(--white); padding: 16px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); cursor: pointer; }
+        .banner-btn { background: var(--primary-green); color: var(--white); border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .rates-box { background: var(--white); border-radius: 16px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 20px; }
+        .rate-cards { display: flex; gap: 10px; margin-top: 10px; }
+        .rate-card { flex: 1; background: var(--bg-color); border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 10px; }
+        
+        /* PROFESSIONAL CSS LOGOS */
+        .logo-badge { width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 800; font-size: 14px; color: white; }
+        .saf-badge { background: #2E9E53; }
+        .airtel-badge { background: #E31837; }
+
+        /* --- FORMS & UI --- */
+        .convert-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid var(--border-color); }
+        .network-toggle { display: flex; background: var(--white); border-radius: 12px; padding: 5px; margin-bottom: 20px; border: 1px solid var(--border-color); }
+        .net-btn { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 8px; font-weight: 700; color: var(--text-gray); cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .net-btn.active { border: 2px solid var(--primary-green); color: var(--primary-green); background: #F0FDF4; }
+        .input-wrapper { display: flex; align-items: center; background: #F9F9F9; border: 1px solid var(--border-color); border-radius: 12px; padding: 0 15px; margin-bottom: 15px; }
+        .input-wrapper input { border: none; outline: none; padding: 16px 10px; width: 100%; font-size: 15px; font-weight: 600; background: transparent; }
+        .submit-btn { width: 100%; padding: 18px; background: var(--primary-green); color: var(--white); border: none; border-radius: 12px; font-size: 16px; font-weight: 800; cursor: pointer; }
+        
+        .info-note { background: #EFF6FF; border-radius: 12px; padding: 15px; margin-top: 20px; display: flex; gap: 12px; border: 1px solid #BFDBFE; }
+        .info-note i { color: #3B82F6; font-size: 18px; margin-top: 2px; }
+        .info-note p { font-size: 12.5px; color: #1E3A8A; line-height: 1.5; font-weight: 500; }
+
+        /* --- BOTTOM NAV --- */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); display: flex; justify-content: space-around; align-items: center; padding: 10px 0 20px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 100; max-width: 480px; margin: 0 auto; border-radius: 20px 20px 0 0; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-gray); font-size: 10px; font-weight: 600; cursor: pointer; }
+        .nav-item.active { color: var(--primary-green); }
+        .fab-container { position: relative; top: -25px; }
+        .fab { width: 60px; height: 60px; background: var(--primary-green); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; box-shadow: 0 4px 15px rgba(46, 158, 83, 0.4); cursor: pointer; border: 4px solid var(--white); }
+
+        /* --- BUNDLES UI --- */
+        .bundle-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
+        .bundle-header { display: flex; align-items: center; gap: 12px; }
+        .bundle-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+        .bundle-icon.data { background: #FFF3E0; color: #F57C00; }
+        .bundle-info h4 { font-size: 16px; font-weight: 800; color: var(--text-dark); }
+        .bundle-info p { font-size: 12px; color: var(--text-gray); font-weight: 600; }
+        .bundle-validity { font-size: 12px; color: var(--text-gray); display: flex; align-items: center; gap: 6px; font-weight: 600; }
+        .bundle-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }
+        .bundle-price { font-size: 18px; font-weight: 800; color: var(--text-dark); }
+        .bundle-price span { font-size: 12px; color: var(--text-gray); font-weight: 700; }
+        .bundle-buy-btn { background: var(--primary-green); color: white; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 14px; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+
+        /* --- MODALS (For Deposit & Convert) --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .modal { background: white; width: 100%; max-width: 400px; padding: 25px; border-radius: 20px; text-align: center; }
+        
+        /* NEW: Styles for USSD Box and Summary */
+        .ussd-code-box { background: #F0FDF4; padding: 15px; border-radius: 12px; border: 2px dashed var(--primary-green); font-size: 22px; font-weight: 800; color: var(--primary-green); letter-spacing: 1px; margin: 15px 0; word-break: break-all; }
+        .summary-box { background: #F9F9F9; border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 1px solid var(--border-color); text-align: left; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+        .summary-row:last-child { margin-bottom: 0; border-top: 1px solid #eee; padding-top: 8px; font-weight: 800; color: var(--dark-green); }
+
+        #loginScreen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--primary-green); z-index: 2000; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .login-box { background: white; padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; text-align: center; }
+        .login-box h2 { color: var(--dark-green); margin-bottom: 10px; font-size: 24px; font-weight: 800; }
+        .login-box p { color: #666; font-size: 14px; margin-bottom: 20px; }
+        
+        /* --- PREMIUM HISTORY & ACCOUNT --- */
+        .history-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        
+        .profile-card { background: white; border-radius: 24px; padding: 30px 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-color); position: relative; overflow: hidden; }
+        .profile-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 80px; background: linear-gradient(135deg, #34A853 0%, #118C4F 100%); z-index: 0; }
+        .avatar { width: 90px; height: 90px; background: #E8F5E9; color: var(--primary-green); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 36px; margin: 0 auto 15px; font-weight: 800; border: 4px solid white; position: relative; z-index: 1; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .account-info { position: relative; z-index: 1; margin-bottom: 20px; }
+        .account-info h2 { font-size: 20px; font-weight: 800; color: var(--text-dark); margin-bottom: 4px; }
+        .account-info p { font-size: 13px; color: var(--text-gray); font-weight: 600; }
+        
+        .integrated-wallet { background: var(--bg-color); border-radius: 16px; padding: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); }
+        .integrated-wallet h3 { font-size: 12px; color: var(--text-gray); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+        .integrated-wallet h2 { font-size: 24px; color: var(--primary-green); font-weight: 800; }
+    </style>
+</head>
+<body>
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+    <div class="login-box">
+        <i class="fa-solid fa-wallet" style="font-size: 40px; color: var(--primary-green); margin-bottom: 15px;"></i>
+        <h2>Welcome to AirSwap</h2>
+        <p>Enter your M-Pesa number to create an account or log in.</p>
+        <input type="tel" id="loginPhone" placeholder="e.g. 0712345678" style="width: 100%; padding: 15px; border: 1px solid #ccc; border-radius: 12px; font-size: 16px; outline: none; margin-bottom: 15px;">
+        <button onclick="loginUser()" style="width: 100%; padding: 15px; background: var(--primary-green); color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer;">Continue</button>
+    </div>
+</div><div class="app-container">
+    <!-- ================= HOME SECTION ================= -->
+    <div id="homeSection">
+        <div class="top-logo-header">
+            <div class="logo-text">
+                <i class="fa-solid fa-bolt logo-icon"></i> AirSwap
+            </div>
+            <i class="fa-solid fa-bars" style="font-size: 20px; color: var(--text-gray); cursor: pointer;"></i>
+        </div>
+
+        <div class="hero">
+            <h1>Convert Airtime to Instant Cash</h1>
+            <p>Get paid directly to M-Pesa within minutes at 95% rate.</p>
+            <button class="hero-btn" onclick="showSection('convertSection')">Convert Now <i class="fa-solid fa-arrow-right"></i></button>
+            <div class="phone-mockup">
+                <div style="width: 40px; height: 40px; background: #E8F5E9; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin-top: 15px; margin-bottom: 10px;"><i class="fa-solid fa-check" style="color: #2E9E53; font-size: 20px;"></i></div>
+                <p style="font-size: 9px; font-weight: 700; color: #2E9E53;">Money Received</p>
+            </div>
+        </div>
+
+        <div class="section-title"><h2>Quick Actions</h2></div>
+        <div class="grid-2x2">
+            <div class="action-card card-convert" onclick="showSection('convertSection')">
+                <div class="action-icon"><i class="fa-solid fa-right-left"></i></div>
+                <div class="action-text"><h3>Convert Airtime</h3><p>To M-Pesa</p></div>
+            </div>
+            <div class="action-card card-buy" onclick="showSection('buyAirtimeSection')">
+                <div class="action-icon"><i class="fa-solid fa-mobile-screen"></i></div>
+                <div class="action-text"><h3>Buy Airtime</h3><p>Using Wallet</p></div>
+            </div>
+            <div class="action-card card-voucher" onclick="showSection('voucherSection')">
+                <div class="action-icon"><i class="fa-solid fa-ticket"></i></div>
+                <div class="action-text"><h3>Voucher TopUp</h3><p>Game, data & more</p></div>
+            </div>
+            <div class="action-card card-share" onclick="shareApp()">
+                <div class="action-icon"><i class="fa-solid fa-share-nodes"></i></div>
+                <div class="action-text"><h3>Share</h3><p>Invite friends</p></div>
+            </div>
+        </div>
+
+        <div class="banner" onclick="showSection('dataOffersSection')">
+            <div style="display:flex; gap:12px; align-items:center;">
+                <div class="action-icon" style="background: #E8F5E9; color: #2E9E53;"><i class="fa-solid fa-wifi"></i></div>
+                <div><h4 style="font-size:15px; font-weight:700;">Data Offers</h4><p style="font-size:12px; color:#888;">Get affordable data bundles.</p></div>
+            </div>
+            <button class="banner-btn">Buy data</button>
+        </div>
+
+        <div class="banner" onclick="contactSupport()">
+            <div style="display:flex; gap:12px; align-items:center;">
+                <div class="action-icon" style="background: #EFF6FF; color: #3B82F6;"><i class="fa-solid fa-headset"></i></div>
+                <div><h4 style="font-size:15px; font-weight:700;">Contact Us?</h4><p style="font-size:12px; color:#888;">Our support team is ready.</p></div>
+            </div>
+            <button class="banner-btn" style="background:white; color:var(--primary-green); border:1px solid var(--primary-green);">Contact</button>
+        </div>
+
+        <div class="rates-box">
+            <div style="display:flex; justify-content:space-between;"><h3 style="font-size:16px; font-weight:800;">Today's Rates</h3></div>
+            <div class="rate-cards">
+                <div class="rate-card">
+                    <div class="logo-badge saf-badge">S</div>
+                    <div><p style="font-size:11px; color:#888;">Safaricom</p><h4 style="font-size:16px; font-weight:800; color:var(--primary-green);">95%</h4></div>
+                </div>
+                <div class="rate-card">
+                    <div class="logo-badge airtel-badge">A</div>
+                    <div><p style="font-size:11px; color:#888;">Airtel</p><h4 style="font-size:16px; font-weight:800; color:var(--primary-green);">95%</h4></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= CONVERT AIRTIME SECTION ================= -->
+    <div id="convertSection" style="display:none;">
+        
+        <div class="top-logo-header">
+            <div class="logo-text">
+                <i class="fa-solid fa-bolt logo-icon"></i> AirSwap
+            </div>
+            <i class="fa-solid fa-bars" style="font-size: 20px; color: var(--text-gray); cursor: pointer;"></i>
+        </div>
+
+        <div class="convert-card">
+            
+            <div class="network-toggle">
+                <button class="net-btn active" id="btnSaf" onclick="selectNetwork('Safaricom')">
+                    <div class="logo-badge saf-badge" style="width:20px;height:20px;font-size:10px;">S</div> Safaricom
+                </button>
+                <button class="net-btn" id="btnAirtel" onclick="selectNetwork('Airtel')">
+                    <div class="logo-badge airtel-badge" style="width:20px;height:20px;font-size:10px;">A</div> Airtel
+                </button>
+            </div>
+
+            <div style="background: #F0FDF4; border-radius: 12px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <p style="font-size: 13px; color: #166534; font-weight: 600;">Conversion <span id="netNameText" style="font-weight: 800;">Safaricom</span> airtime into Mpesa at rate of</p>
+                <h3 style="font-size: 22px; color: var(--primary-green); font-weight: 800;">95%</h3>
+            </div>
+
+            <form onsubmit="submitConversion(event)">
+                
+                <label style="display:block; font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-dark);">Airtime Sending Number</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-paper-plane" style="color:#888; margin-right:10px;"></i>
+                    <input type="tel" id="convSenderPhone" placeholder="Enter number sending airtime" required>
+                </div>
+                
+                <label style="display:block; font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-dark);">M-Pesa Receiving Number</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-money-bill-wave" style="color:#888; margin-right:10px;"></i>
+                    <input type="tel" id="convReceiverPhone" placeholder="Enter number to receive cash" required>
+                </div>
+
+                <label style="display:block; font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-dark);">Airtime Amount</label>
+                <div class="input-wrapper">
+                    <span style="font-weight: 700; color: #888; font-size: 14px; margin-right:10px;">KES</span>
+                    <input type="number" id="convAmount" placeholder="Enter amount (KES 100 - 70,000)" required min="100" max="70000" oninput="calculatePayout()">
+                </div>
+                
+                <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+                    <p style="font-size: 12px; font-weight: 700; color: #166534; text-transform: uppercase;">You will receive</p>
+                    <h2 id="payoutDisplay" style="font-size: 32px; color: var(--primary-green); font-weight: 800; margin: 5px 0;">KES 0.00</h2>
+                </div>
+                
+                <button type="submit" class="submit-btn">Continue <i class="fa-solid fa-arrow-right"></i></button>
+            </form>
+
+            <div class="info-note">
+                <i class="fa-solid fa-circle-info"></i>
+                <p>This service is fully automated. In the event of any delay in payment, contact us using the numbers on our Contact page.</p>
+            </div>
+
+        </div>
+    </div>    <!-- ================= DEPOSIT SECTION ================= -->
+    <div id="depositSection" style="display:none;">
+        <div class="page-header">
+            <button class="back-btn" onclick="showSection('homeSection')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2>Deposit Funds</h2>
+        </div>
+
+        <div class="convert-card">
+            <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Enter your M-Pesa number and the amount you want to deposit.</p>
+
+            <label style="display:block; font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-dark);">M-Pesa Number to Deposit From</label>
+            <div class="input-wrapper">
+                <i class="fa-solid fa-mobile-screen" style="color:#888; margin-right:10px;"></i>
+                <input type="tel" id="depositPhone" placeholder="e.g. 0712345678" value="">
+            </div>
+
+            <label style="display:block; font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-dark);">Amount to Deposit (KES)</label>
+            <div class="input-wrapper">
+                <span style="font-weight: 700; color: #888; font-size: 14px; margin-right:10px;">KES</span>
+                <input type="number" id="depositAmount" placeholder="Amount (KES 100 - 70,000)" min="100" max="70000">
+            </div>
+
+            <button onclick="showDepositInstructions()" class="submit-btn" style="margin-top: 10px;">Proceed to Pay</button>
+        </div>
+    </div>
+
+    <!-- ================= BUY AIRTIME SECTION ================= -->
+    <div id="buyAirtimeSection" style="display:none;">
+        <div class="page-header">
+            <button class="back-btn" onclick="showSection('homeSection')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2>Buy Airtime</h2>
+        </div>
+        
+        <div class="network-toggle">
+            <button class="net-btn active" id="buyBtnSaf" onclick="selectBuyNetwork('Safaricom')" style="padding:10px; font-size:12px;">Safaricom</button>
+            <button class="net-btn" id="buyBtnAirtel" onclick="selectBuyNetwork('Airtel')" style="padding:10px; font-size:12px;">Airtel</button>
+        </div>
+
+        <div class="input-wrapper">
+            <i class="fa-solid fa-mobile-screen" style="color:#888; margin-right:10px;"></i>
+            <input type="tel" id="buyPhone" placeholder="Phone Number" value="">
+        </div>
+        <div class="input-wrapper">
+            <span style="font-weight: 700; color: #888; font-size: 14px; margin-right:10px;">KES</span>
+            <input type="number" id="buyAmount" placeholder="Amount (Min KES 10)">
+        </div>
+        
+        <button onclick="processAirtimePurchase()" class="submit-btn" style="margin-top:10px;">Buy Now</button>
+    </div>
+
+    <!-- ================= DATA OFFERS SECTION ================= -->
+    <div id="dataOffersSection" style="display:none;">
+        <div class="page-header">
+            <button class="back-btn" onclick="showSection('homeSection')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2>Bundles & Minutes</h2>
+        </div>
+        
+        <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Select a bundle or minutes package and purchase instantly.</p>
+
+        <div class="network-toggle" style="margin-bottom:15px;">
+            <button class="net-btn active" id="dataBtnSaf" onclick="selectDataNetwork('Safaricom')" style="padding:10px; font-size:12px;">Safaricom</button>
+            <button class="net-btn" id="dataBtnAirtel" onclick="selectDataNetwork('Airtel')" style="padding:10px; font-size:12px;">Airtel</button>
+        </div>
+
+        <div class="input-wrapper">
+            <i class="fa-solid fa-mobile-screen" style="color:#888; margin-right:10px;"></i>
+            <input type="tel" id="dataPhone" placeholder="Phone Number" value="">
+        </div>
+
+        <h3 style="font-size: 15px; font-weight: 800; margin-bottom: 15px; color: var(--dark-green);">Available Data Bundles</h3>
+
+        <div class="bundle-card">
+            <div class="bundle-header">
+                <div class="bundle-icon data"><i class="fa-solid fa-wifi"></i></div>
+                <div class="bundle-info">
+                    <h4>1GB</h4>
+                    <p>Data Bundle</p>
+                </div>
+            </div>
+            <div class="bundle-validity"><i class="fa-regular fa-clock"></i> Valid for midnight</div>
+            <div class="bundle-footer">
+                <div class="bundle-price"><span>KES</span> 55</div>
+                <button class="bundle-buy-btn" onclick="processDataPurchase('1GB Midnight', 55)">Buy Now <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <div class="bundle-card">
+            <div class="bundle-header">
+                <div class="bundle-icon data"><i class="fa-solid fa-wifi"></i></div>
+                <div class="bundle-info">
+                    <h4>1.5GB</h4>
+                    <p>Data Bundle</p>
+                </div>
+            </div>
+            <div class="bundle-validity"><i class="fa-regular fa-clock"></i> Valid for 24Hrs</div>
+            <div class="bundle-footer">
+                <div class="bundle-price"><span>KES</span> 99</div>
+                <button class="bundle-buy-btn" onclick="processDataPurchase('1.5GB 24Hrs', 99)">Buy Now <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <div class="bundle-card">
+            <div class="bundle-header">
+                <div class="bundle-icon data"><i class="fa-solid fa-wifi"></i></div>
+                <div class="bundle-info">
+                    <h4>1GB (1Hr)</h4>
+                    <p>Data Bundle</p>
+                </div>
+            </div>
+            <div class="bundle-validity"><i class="fa-regular fa-clock"></i> Valid for 1Hr</div>
+            <div class="bundle-footer">
+                <div class="bundle-price"><span>KES</span> 19</div>
+                <button class="bundle-buy-btn" onclick="processDataPurchase('1GB 1Hr', 19)">Buy Now <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+        
+        <div class="bundle-card">
+            <div class="bundle-header">
+                <div class="bundle-icon data"><i class="fa-solid fa-wifi"></i></div>
+                <div class="bundle-info">
+                    <h4>250MB</h4>
+                    <p>Data Bundle</p>
+                </div>
+            </div>
+            <div class="bundle-validity"><i class="fa-regular fa-clock"></i> Valid for 24Hrs</div>
+            <div class="bundle-footer">
+                <div class="bundle-price"><span>KES</span> 20</div>
+                <button class="bundle-buy-btn" onclick="processDataPurchase('250MB 24Hrs', 20)">Buy Now <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= VOUCHER SECTION ================= -->
+    <div id="voucherSection" style="display:none;">
+        <div class="page-header">
+            <button class="back-btn" onclick="showSection('homeSection')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2>Game Vouchers</h2>
+        </div>
+        
+        <div class="input-wrapper" style="padding: 5px 15px;">
+            <i class="fa-solid fa-gamepad" style="color:#888; margin-right:10px;"></i>
+            <select id="gameSelect" style="width:100%; padding:15px 10px; border:none; outline:none; background:transparent; font-size:15px; font-weight:600;">
+                <option value="FIFA Mobile">FIFA Mobile</option>
+                <option value="Call of Duty Mobile">Call of Duty Mobile</option>
+                <option value="Free Fire">Free Fire</option>
+                <option value="PUBG Mobile">PUBG Mobile</option>
+            </select>
+        </div>
+
+        <div class="input-wrapper">
+            <span style="font-weight: 700; color: #888; font-size: 14px; margin-right:10px;">KES</span>
+            <input type="number" id="voucherAmount" placeholder="Amount (Min KES 50)">
+        </div>
+        
+        <button onclick="processVoucherPurchase()" class="submit-btn">Buy Voucher</button>
+    </div>
+
+    <!-- ================= HISTORY SECTION ================= -->
+    <div id="historySection" style="display:none;">
+        <div class="page-header">
+            <button class="back-btn" onclick="showSection('homeSection')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2>Transaction History</h2>
+        </div>
+        <div id="historyList">Loading...</div>
+    </div>
+
+    <!-- ================= ACCOUNT SECTION ================= -->
+    <div id="accountSection" style="display:none;">
+        <div class="page-header">
+            <button class="back-btn" onclick="showSection('homeSection')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2>My Account</h2>
+        </div>
+
+        <div class="profile-card">
+            <div class="avatar"><i class="fa-solid fa-user"></i></div>
+            
+            <div class="account-info">
+                <h2 id="accPhone">-</h2>
+                <p>AirSwap Verified Member</p>
+            </div>
+
+            <div class="integrated-wallet">
+                <div style="text-align: left;">
+                    <h3>Wallet Balance</h3>
+                    <h2 id="accBalance">KES 0.00</h2>
+                </div>
+                <button class="deposit-btn" onclick="showSection('depositSection')" style="padding: 10px 15px; font-size: 13px; background: var(--primary-green); color: white;"><i class="fa-solid fa-plus"></i> Deposit</button>
+            </div>
+
+            <button onclick="logoutUser()" style="width: 100%; padding: 14px; background: #FEE2E2; color: #DC2626; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px;">Log Out / Change Number</button>
+        </div>
+    </div>
+
+    <!-- ================= PRIVACY SECTION ================= -->
+    <div id="privacySection" style="display:none;">
+        <div class="page-header">
+            <button class="back-btn" onclick="showSection('homeSection')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2>Privacy Policy</h2>
+        </div>
+        <div style="background:white; padding:20px; border-radius:16px; font-size:14px; line-height:1.6; color:#444;">
+            <p style="margin-bottom:10px;"><b>1. Data Collection:</b> We collect your phone number and transaction history solely for the purpose of processing your airtime conversions and wallet deposits.</p>
+            <p style="margin-bottom:10px;"><b>2. Security:</b> Your data is encrypted and stored securely. We do not sell your data to third parties.</p>
+            <p><b>3. Compliance:</b> We comply with the Kenya Data Protection Act (2019).</p>
+        </div>
+    </div>
+
+</div> <!-- End app-container -->
+
+<!-- ================= DEPOSIT CONFIRMATION MODAL ================= -->
+<div class="modal-overlay" id="depositConfirmModal">
+    <div class="modal">
+        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 8px; color: var(--text-dark);">Payment Instructions</h2>
+        <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Please pay exactly <b style="color: var(--primary-green); font-size: 16px;" id="confirmAmountDisplay">KES 0</b> to the details below.</p>
+        
+        <div style="background: #F0FDF4; padding: 20px; border-radius: 16px; margin-bottom: 20px; text-align: left; border: 1px solid #BBF7D0;">
+            <p style="font-size: 15px; margin-bottom: 8px;"><b>Paybill:</b> <span id="confirmPaybill" style="color: var(--primary-green); font-weight: 800; font-size: 16px;">Loading...</span></p>
+            <p style="font-size: 15px;"><b>Account:</b> <span id="confirmAccount" style="color: var(--primary-green); font-weight: 800; font-size: 16px;">Loading...</span></p>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 20px;">After completing the M-Pesa transaction on your phone, click the button below.</p>
+        
+        <button onclick="finalizeDeposit()" id="confirmDepositBtn" style="width:100%; padding:18px; background:var(--primary-green); color:white; border:none; border-radius:12px; font-weight:800; font-size:16px; cursor:pointer; margin-bottom: 10px;">✅ Done, I Have Paid</button>
+        <button onclick="closeModal('depositConfirmModal')" style="width:100%; padding:15px; background:#eee; color:#333; border:none; border-radius:12px; font-weight:800; font-size:16px; cursor:pointer;">Cancel</button>
+    </div>
+</div>
+
+<!-- ================= NEW: CONVERT AIRTIME MODAL ================= -->
+<div class="modal-overlay" id="convertConfirmModal">
+    <div class="modal">
+        <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 15px; color: var(--text-dark);">Transfer Instructions</h2>
+        <p style="font-size: 14px; color: #666; margin-bottom: 15px;">To complete your conversion, dial the code below from your phone.</p>
+        
+        <div class="ussd-code-box" id="ussdStringDisplay">*140*0*07XX#</div>
+
+        <p style="font-size: 12px; color: var(--text-gray); margin-bottom: 15px; text-align: left;">
+            <i class="fa-solid fa-circle-exclamation" style="color: var(--primary-green);"></i> 
+            <span id="networkInstructionText"></span>
+        </p>
+
+        <div class="summary-box">
+            <div class="summary-row">
+                <span style="color: var(--text-gray);">Sending From:</span>
+                <span id="summarySender" style="font-weight: 700;">-</span>
+            </div>
+            <div class="summary-row">
+                <span style="color: var(--text-gray);">Receiving Cash On:</span>
+                <span id="summaryReceiver" style="font-weight: 700;">-</span>
+            </div>
+            <div class="summary-row">
+                <span>Sending Airtime:</span>
+                <span id="summaryAmount">KES 0</span>
+            </div>
+            <div class="summary-row">
+                <span>You Will Receive:</span>
+                <span id="summaryPayout" style="color: var(--primary-green); font-size: 16px;">KES 0</span>
+            </div>
+        </div>
+
+        <button onclick="finalizeConversion()" id="confirmConvBtn" style="width:100%; padding:18px; background:var(--primary-green); color:white; border:none; border-radius:12px; font-weight:800; font-size:16px; cursor:pointer; margin-bottom: 10px;">✅ Done, I Have Sent It</button>
+        <button onclick="closeModal('convertConfirmModal')" style="width:100%; padding:15px; background:#eee; color:#333; border:none; border-radius:12px; font-weight:800; font-size:16px; cursor:pointer;">Cancel</button>
+    </div>
+</div>
+
+<!-- BOTTOM NAVIGATION -->
+<div class="bottom-nav">
+    <a class="nav-item active" id="navHome" onclick="showSection('homeSection')">
+        <i class="fa-solid fa-house"></i> Home
+    </a>
+    <a class="nav-item" id="navPrivacy" onclick="showSection('privacySection')">
+        <i class="fa-solid fa-shield-halved"></i> Privacy
+    </a>
+    <div class="fab-container">
+        <div class="fab" onclick="showSection('convertSection')">
+            <i class="fa-solid fa-right-left"></i>
+        </div>
+    </div>
+    <a class="nav-item" id="navHistory" onclick="loadHistory()">
+        <i class="fa-solid fa-clock-rotate-left"></i> History
+    </a>
+    <a class="nav-item" id="navAccount" onclick="loadAccount()">
+        <i class="fa-solid fa-user"></i> Account
+    </a>
+</div><script>
+    let userPhone = localStorage.getItem('airswap_phone') || null;
+    let currentBalance = 0;
+    let selectedNetwork = 'Safaricom';
+    let buyNetwork = 'Safaricom';
+    let dataNetwork = 'Safaricom';
+    
+    // Global variables to hold Paybill & Receiving Numbers
+    let globalPaybill = '756756';
+    let globalAccount = '17690003';
+    let globalSafNumber = '0750140380'; // Will be updated from Admin Panel
+    let globalAirtelNumber = '0733123456'; // Will be updated from Admin Panel
+
+    // Variables to hold temporary deposit/conversion data
+    let tempDepositPhone = '';
+    let tempDepositAmount = 0;
+    let tempSenderPhone = '';
+    let tempReceiverPhone = '';
+    let tempAirtimeAmount = 0;
+
+    // --- CUSTOM TOAST FUNCTION ---
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        let icon = 'fa-circle-info';
+        if(type === 'success') icon = 'fa-circle-check';
+        if(type === 'error') icon = 'fa-circle-exclamation';
+
+        toast.innerHTML = `<i class="fa-solid ${icon}" style="font-size:18px;"></i> <span>${message}</span>`;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // --- LOGIN / AUTH LOGIC ---
+    function loginUser() {
+        const input = document.getElementById('loginPhone').value.trim();
+        if (input.length < 9) return showToast("Please enter a valid phone number.", "error");
+        
+        let formatted = input;
+        if (formatted.startsWith('+254')) formatted = '0' + formatted.slice(4);
+        if (formatted.startsWith('254')) formatted = '0' + formatted.slice(3);
+
+        localStorage.setItem('airswap_phone', formatted);
+        userPhone = formatted;
+        
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('buyPhone').value = formatted;
+        document.getElementById('dataPhone').value = formatted;
+        document.getElementById('convReceiverPhone').value = formatted; 
+        document.getElementById('depositPhone').value = formatted; 
+        initApp();
+    }
+
+    function logoutUser() {
+        localStorage.removeItem('airswap_phone');
+        userPhone = null;
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('loginPhone').value = '';
+    }
+
+    if (userPhone) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('buyPhone').value = userPhone;
+        document.getElementById('dataPhone').value = userPhone;
+        document.getElementById('convReceiverPhone').value = userPhone;
+        document.getElementById('depositPhone').value = userPhone; 
+        initApp();
+    } else {
+        document.getElementById('loginScreen').style.display = 'flex';
+    }
+
+    // --- INIT & WALLET ---
+    async function initApp() {
+        try {
+            const setRes = await fetch('/api/settings');
+            if(setRes.ok) {
+                const setData = await setRes.json();
+                globalPaybill = setData.paybill || '756756';
+                globalAccount = setData.account || '17690003';
+                
+                // Store the dynamic receiving numbers from Admin Panel
+                if(setData.safaricomReceiving) globalSafNumber = setData.safaricomReceiving;
+                if(setData.airtelReceiving) globalAirtelNumber = setData.airtelReceiving;
+            }
+        } catch (e) { 
+            console.log("Server is likely asleep. Using default numbers."); 
+        }
+        fetchWallet();
+    }
+
+    async function fetchWallet() {
+        if(!userPhone) return;
+        try {
+            const res = await fetch(`/api/wallet/${userPhone}`);
+            const data = await res.json();
+            currentBalance = data.balance || 0;
+            
+            const balanceStr = `KES ${currentBalance.toLocaleString('en-KE', {minimumFractionDigits:2})}`;
+            document.getElementById('accBalance').innerText = balanceStr;
+        } catch (e) {}
+    }
+
+    // --- NAVIGATION ---
+    function showSection(sectionId) {
+        const sections = [
+            'homeSection', 'convertSection', 'depositSection', 'buyAirtimeSection', 
+            'dataOffersSection', 'voucherSection', 'historySection', 
+            'accountSection', 'privacySection'
+        ];
+        
+        sections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        
+        const target = document.getElementById(sectionId);
+        if (target) target.style.display = 'block';
+        
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        if(sectionId === 'homeSection') document.getElementById('navHome').classList.add('active');
+        if(sectionId === 'privacySection') document.getElementById('navPrivacy').classList.add('active');
+        if(sectionId === 'historySection') document.getElementById('navHistory').classList.add('active');
+        if(sectionId === 'accountSection') document.getElementById('navAccount').classList.add('active');
+        
+        window.scrollTo(0,0);
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // --- DEPOSIT FLOW ---
+    function showDepositInstructions() {
+        const phone = document.getElementById('depositPhone').value;
+        const amount = document.getElementById('depositAmount').value;
+
+        if (!phone || phone.length < 9) return showToast("Please enter a valid M-Pesa number.", "error");
+        if (!amount || amount < 100 || amount > 70000) return showToast("Amount must be between KES 100 and KES 70,000.", "error");
+
+        tempDepositPhone = phone;
+        tempDepositAmount = amount;
+
+        document.getElementById('confirmAmountDisplay').innerText = `KES ${Number(amount).toLocaleString()}`;
+        document.getElementById('confirmPaybill').innerText = globalPaybill;
+        document.getElementById('confirmAccount').innerText = globalAccount;
+
+        document.getElementById('depositConfirmModal').style.display = 'flex';
+    }
+
+    async function finalizeDeposit() {
+        const btn = document.getElementById('confirmDepositBtn');
+        btn.innerHTML = 'Processing...'; btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/deposit/request', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: tempDepositPhone, amount: tempDepositAmount, mpesaCode: 'PENDING' })
+            });
+            const data = await res.json();
+            
+            showToast(data.message || "Deposit submitted!", "success");
+            closeModal('depositConfirmModal');
+            document.getElementById('depositAmount').value = ''; 
+            showSection('homeSection');
+        } catch (e) {
+            showToast("Server is waking up. Please wait 30 seconds and try again.", "error");
+        } finally {
+            btn.innerHTML = '✅ Done, I Have Paid';
+            btn.disabled = false;
+        }
+    }
+
+    // --- BUY AIRTIME & DATA (Same as before) ---
+    function selectBuyNetwork(net) {
+        buyNetwork = net;
+        document.getElementById('buyBtnSaf').classList.toggle('active', net === 'Safaricom');
+        document.getElementById('buyBtnAirtel').classList.toggle('active', net === 'Airtel');
+    }
+    async function processAirtimePurchase() {
+        const phone = document.getElementById('buyPhone').value;
+        const amount = document.getElementById('buyAmount').value;
+        if (!phone || !amount || amount < 10) return showToast("Enter valid phone and amount (min KES 10).", "error");
+        
+        if(currentBalance < amount) {
+            showToast("Insufficient balance. Please deposit to continue.", "error");
+            showSection('depositSection'); 
+            return;
+        }
+
+        await executePurchase(amount, `Buy ${buyNetwork} Airtime (${phone})`);
+        document.getElementById('buyAmount').value = '';
+        showSection('homeSection'); 
+    }
+
+    function selectDataNetwork(net) {
+        dataNetwork = net;
+        document.getElementById('dataBtnSaf').classList.toggle('active', net === 'Safaricom');
+        document.getElementById('dataBtnAirtel').classList.toggle('active', net === 'Airtel');
+    }
+    async function processDataPurchase(bundleName, price) {
+        const phone = document.getElementById('dataPhone').value;
+        if (!phone) return showToast("Enter a valid phone number.", "error");
+        
+        if(currentBalance < price) {
+            showToast("Insufficient balance. Please deposit to continue.", "error");
+            showSection('depositSection'); 
+            return;
+        }
+
+        await executePurchase(price, `${dataNetwork} Data: ${bundleName} (${phone})`);
+        showSection('homeSection');
+    }
+
+    async function processVoucherPurchase() {
+        const game = document.getElementById('gameSelect').value;
+        const amount = document.getElementById('voucherAmount').value;
+        if (!amount || amount < 50) return showToast("Enter valid amount (min KES 50).", "error");
+        
+        if(currentBalance < amount) {
+            showToast("Insufficient balance. Please deposit to continue.", "error");
+            showSection('depositSection'); 
+            return;
+        }
+
+        await executePurchase(amount, `${game} Voucher`);
+        document.getElementById('voucherAmount').value = '';
+        showSection('homeSection');
+    }
+
+    async function executePurchase(amount, description) {
+        try {
+            const res = await fetch('/api/purchase', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: userPhone, amount: Number(amount), description })
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                showToast(data.message, "success");
+                fetchWallet(); 
+            } else {
+                showToast(data.error, "error");
+            }
+        } catch(e) {
+            showToast("Network error. Please try again.", "error");
+        }
+    }
+
+    function shareApp() {
+        if (navigator.share) {
+            navigator.share({ title: 'AirSwap', text: 'Convert your airtime to instant M-Pesa cash at 95% rate!', url: window.location.href }).catch(console.error);
+        } else {
+            showToast("Copy this link to share: " + window.location.href, "info");
+        }
+    }
+
+    // --- HISTORY & ACCOUNT ---
+    async function loadHistory() {
+        showSection('historySection');
+        document.getElementById('historyList').innerHTML = 'Loading...';
+        try {
+            const res = await fetch(`/api/history/${userPhone}`);
+            const history = await res.json();
+            
+            if (history.length === 0) {
+                document.getElementById('historyList').innerHTML = '<p style="text-align:center; color:#888;">No transactions yet.</p>';
+                return;
+            }
+            document.getElementById('historyList').innerHTML = history.map(h => `
+                <div class="history-item">
+                    <div>
+                        <h4 style="font-size:14px; font-weight:700;">${h.desc}</h4>
+                        <p style="font-size:12px; color:#888;">${new Date(h.date).toLocaleString()}</p>
+                    </div>
+                    <div style="font-size:16px; font-weight:800; color:${h.amount > 0 ? 'var(--primary-green)' : 'red'};">
+                        ${h.amount > 0 ? '+' : ''}${h.amount}
+                    </div>
+                </div>
+            `).join('');
+        } catch(e) {
+            document.getElementById('historyList').innerHTML = '<p style="text-align:center; color:#888;">Failed to load history.</p>';
+        }
+    }
+
+    async function loadAccount() {
+        showSection('accountSection');
+        document.getElementById('accPhone').innerText = userPhone;
+        await fetchWallet(); 
+    }
+
+    // --- CONVERT LOGIC ---
+    function selectNetwork(network) {
+        selectedNetwork = network;
+        document.getElementById('btnSaf').classList.toggle('active', network === 'Safaricom');
+        document.getElementById('btnAirtel').classList.toggle('active', network === 'Airtel');
+        document.getElementById('netNameText').innerText = network;
+        calculatePayout(); 
+    }
+
+    function calculatePayout() {
+        const amount = parseFloat(document.getElementById('convAmount').value) || 0;
+        const payout = amount * 0.95;
+        document.getElementById('payoutDisplay').innerText = `KES ${payout.toLocaleString('en-KE', {minimumFractionDigits: 2})}`;
+    }
+
+    function submitConversion(e) {
+        e.preventDefault();
+        const senderPhone = document.getElementById('convSenderPhone').value;
+        const receiverPhone = document.getElementById('convReceiverPhone').value;
+        const airtimeAmount = parseFloat(document.getElementById('convAmount').value);
+        
+        if (!senderPhone || !receiverPhone) return showToast("Please fill in both phone numbers.", "error");
+        if (airtimeAmount < 100 || airtimeAmount > 70000) {
+            return showToast("Conversion must be between KES 100 and KES 70,000.", "error");
+        }
+
+        tempSenderPhone = senderPhone;
+        tempReceiverPhone = receiverPhone;
+        tempAirtimeAmount = airtimeAmount;
+
+        // FIXED: Use the dynamic global numbers fetched from the Admin Panel
+        let receivingNumber = selectedNetwork === 'Safaricom' ? globalSafNumber : globalAirtelNumber;
+        let ussdString = `*140*${airtimeAmount}*${receivingNumber}#`;
+
+        document.getElementById('ussdStringDisplay').innerText = ussdString;
+        document.getElementById('summarySender').innerText = senderPhone;
+        document.getElementById('summaryReceiver').innerText = receiverPhone;
+        document.getElementById('summaryAmount').innerText = `KES ${airtimeAmount.toLocaleString()}`;
+        document.getElementById('summaryPayout').innerText = `KES ${(airtimeAmount * 0.95).toLocaleString()}`;
+
+        if(selectedNetwork === 'Safaricom') {
+            document.getElementById('networkInstructionText').innerText = "Dial this Safaricom code from your phone. Ensure you have enough airtime balance.";
+        } else {
+            document.getElementById('networkInstructionText').innerText = "Dial *140# on your Airtel line, or send an SMS to 5050 with the format: 2u [Number] [Amount] [PIN].";
+        }
+
+        document.getElementById('convertConfirmModal').style.display = 'flex';
+    }
+
+    async function finalizeConversion() {
+        const btn = document.getElementById('confirmConvBtn');
+        btn.innerHTML = 'Processing...'; btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/convert', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ senderPhone: tempSenderPhone, receiverPhone: tempReceiverPhone, network: selectedNetwork, airtimeAmount: tempAirtimeAmount })
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                showToast("Request sent! Admin will verify and send your M-Pesa.", "success");
+                closeModal('convertConfirmModal');
+                document.getElementById('convAmount').value = '';
+                document.getElementById('convSenderPhone').value = '';
+                document.getElementById('payoutDisplay').innerText = 'KES 0.00';
+                showSection('homeSection');
+            } else {
+                showToast(data.error || "Failed to submit.", "error");
+            }
+        } catch (err) {
+            showToast('Network error. Please try again.', 'error');
+        } finally {
+            btn.innerHTML = '✅ Done, I Have Sent It';
+            btn.disabled = false;
+        }
+    }
+
+    function contactSupport() {
+        window.open(`https://wa.me/254786242976?text=Hello%20AirSwap%20Support`, '_blank');
+    }
+</script>
+</body>
+</html>
